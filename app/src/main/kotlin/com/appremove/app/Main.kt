@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -53,6 +54,7 @@ fun main() =
             undecorated = true,
             transparent = true,
             resizable = false,
+            icon = painterResource("icon/appremove.png"),
         ) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(WINDOW_MARGIN),
