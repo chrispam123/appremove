@@ -1,34 +1,48 @@
 package com.appremove.app
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material.Checkbox
+import androidx.compose.material.CheckboxDefaults
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.darkColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.WindowScope
+import com.appremove.app.components.BackgroundSwatchRow
+import com.appremove.app.components.DimensionField
+import com.appremove.app.components.FrameSquare
+import com.appremove.app.components.LuxuryCta
+import com.appremove.app.components.MetalButton
+import com.appremove.app.components.PunktButton
+import com.appremove.app.components.SectionLabel
+import com.appremove.app.theme.AppColors
+import com.appremove.app.theme.AppTypography
 import com.appremove.domain.bgremoval.BackgroundChoice
 import java.io.File
 import javax.swing.JFileChooser
@@ -48,130 +62,196 @@ private val BACKGROUND_COLOR_PALETTE =
     )
 
 /**
- * Pantalla principal: selector de imagen, campos de ancho/alto (con opción de
- * mantener la proporción), botón para redimensionar y botón para remover el
- * fondo. Todo el estado vive en [AppViewModel]; este composable solo lo lee y
- * dispara sus funciones ante los eventos del usuario.
+ * Pantalla principal. Requiere [WindowScope] porque el wordmark de arriba es
+ * la zona de arrastre de la ventana (no hay barra de título nativa — la
+ * ventana es `undecorated`, ver [com.appremove.app.DeviceFrame] en `Main.kt`).
+ *
+ * Tarea C del rediseño "Bauhaus cromado": por ahora solo el wordmark, el
+ * subtítulo y el divisor dorado tienen el acabado final; el resto de la UI
+ * (elegir imagen, dimensiones, fondo) sigue con componentes Material simples
+ * — se restylean en las Tareas D y E con las piezas Kandinsky (Punkt,
+ * Fläche, Linie, CTA de lujo).
  */
 @Composable
-fun App() {
+fun WindowScope.App() {
     val scope = rememberCoroutineScope()
     val viewModel = remember { AppViewModel(scope) }
 
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text("appremove")
-                Text("Remové fondos y comprimí tus imágenes", style = MaterialTheme.typography.body2)
+    MaterialTheme(
+        colors =
+            darkColors(
+                primary = AppColors.gold1,
+                onPrimary = AppColors.graphite0,
+                background = AppColors.graphite1,
+                onBackground = AppColors.cream,
+                surface = AppColors.graphite1,
+                onSurface = AppColors.cream,
+            ),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 30.dp)
+                    .padding(top = 36.dp, bottom = 30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            WindowDraggableArea {
+                Wordmark()
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
+            GoldDivider()
 
-                Button(onClick = { pickImageFile()?.let(viewModel::onImageSelected) }) {
-                    Text("Elegir imagen")
+            val original = viewModel.originalDimensions
+            val fileStatusLine =
+                when {
+                    viewModel.selectedFile == null -> "Ningún archivo seleccionado"
+                    original == null -> "${viewModel.selectedFile?.name} · leyendo dimensiones…"
+                    else -> "${viewModel.selectedFile?.name} · ${original.width}×${original.height}px"
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(viewModel.selectedFile?.name ?: "Ningún archivo seleccionado")
+            PunktButton(onClick = { pickImageFile()?.let(viewModel::onImageSelected) })
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "Elegir imagen",
+                style = TextStyle(fontFamily = AppTypography.soraFamily, fontWeight = FontWeight.Medium, fontSize = 13.sp),
+                color = AppColors.cream,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                fileStatusLine,
+                style = TextStyle(fontFamily = AppTypography.soraFamily, fontSize = 12.sp),
+                color = AppColors.creamDim,
+            )
 
-                val original = viewModel.originalDimensions
-                if (viewModel.selectedFile != null && original == null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Leyendo dimensiones…")
-                }
+            if (original != null) {
+                Spacer(modifier = Modifier.height(26.dp))
+                Row(modifier = Modifier.fillMaxWidth()) { SectionLabel("Dimensiones") }
+                Spacer(modifier = Modifier.height(12.dp))
 
-                if (original != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Tamaño original: ${original.width}x${original.height}px")
-
-                    Spacer(modifier = Modifier.height(8.dp))
+                FrameSquare {
                     Row {
-                        OutlinedTextField(
+                        DimensionField(
+                            label = "Ancho (px)",
                             value = viewModel.widthInput,
                             onValueChange = viewModel::onWidthChanged,
-                            modifier = Modifier.width(120.dp),
-                            label = { Text("Ancho (px)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        OutlinedTextField(
+                        Spacer(modifier = Modifier.width(14.dp))
+                        DimensionField(
+                            label = "Alto (px)",
                             value = viewModel.heightInput,
                             onValueChange = viewModel::onHeightChanged,
-                            modifier = Modifier.width(120.dp),
-                            label = { Text("Alto (px)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
                         )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = viewModel.keepAspectRatio,
-                            onCheckedChange = viewModel::onKeepAspectRatioChanged,
-                        )
-                        Text("Mantener proporción")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { viewModel.resizeSelected() },
-                    enabled = canResize(viewModel),
-                ) {
-                    Text("Reducir tamaño")
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = viewModel.keepAspectRatio,
+                        onCheckedChange = viewModel::onKeepAspectRatioChanged,
+                        colors =
+                            CheckboxDefaults.colors(
+                                checkedColor = AppColors.gold1,
+                                uncheckedColor = AppColors.chromeMid,
+                                checkmarkColor = AppColors.graphite0,
+                            ),
+                    )
+                    Text(
+                        "Mantener proporción",
+                        style = TextStyle(fontFamily = AppTypography.soraFamily, fontSize = 12.5.sp),
+                        color = AppColors.creamDim,
+                    )
                 }
+
+                Spacer(modifier = Modifier.height(22.dp))
+                MetalButton(text = "Reducir tamaño", onClick = { viewModel.resizeSelected() }, enabled = canResize(viewModel))
 
                 Spacer(modifier = Modifier.height(8.dp))
                 StatusText(viewModel.resizeStatus, processingLabel = "Redimensionando imagen…")
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("Fondo de reemplazo:")
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BackgroundOptionButton(
-                        label = "Transparente",
-                        selected = viewModel.selectedBackground is BackgroundChoice.Transparent,
-                        onClick = { viewModel.onBackgroundChoiceSelected(BackgroundChoice.Transparent) },
-                    )
-                    for (colorChoice in BACKGROUND_COLOR_PALETTE) {
-                        ColorSwatch(
-                            color = Color(colorChoice.red, colorChoice.green, colorChoice.blue),
-                            selected = viewModel.selectedBackground == colorChoice,
-                            onClick = { viewModel.onBackgroundChoiceSelected(colorChoice) },
-                        )
-                    }
-                    BackgroundOptionButton(
-                        label = "Imagen…",
-                        selected = viewModel.selectedBackground is BackgroundChoice.Image,
-                        onClick = { pickImageFile()?.let { viewModel.onBackgroundChoiceSelected(BackgroundChoice.Image(it)) } },
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { viewModel.removeBackgroundSelected() },
-                    enabled = canRemoveBackground(viewModel),
-                ) {
-                    Text("Remover fondo")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                StatusText(
-                    viewModel.backgroundRemovalStatus,
-                    processingLabel = "Removiendo fondo (puede tardar varios segundos)…",
-                )
             }
+
+            Spacer(modifier = Modifier.height(26.dp))
+            Row(modifier = Modifier.fillMaxWidth()) { SectionLabel("Fondo de reemplazo") }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            BackgroundSwatchRow(
+                selected = viewModel.selectedBackground,
+                palette = BACKGROUND_COLOR_PALETTE,
+                onSelect = viewModel::onBackgroundChoiceSelected,
+                onPickImage = { pickImageFile()?.let { viewModel.onBackgroundChoiceSelected(BackgroundChoice.Image(it)) } },
+            )
+
+            Spacer(modifier = Modifier.height(26.dp))
+
+            LuxuryCta(
+                text = "Remover fondo",
+                onClick = { viewModel.removeBackgroundSelected() },
+                enabled = canRemoveBackground(viewModel),
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            StatusText(
+                viewModel.backgroundRemovalStatus,
+                processingLabel = "Removiendo fondo (puede tardar varios segundos)…",
+            )
         }
     }
+}
+
+/**
+ * "amover" en Fraunces itálica con degradado dorado (spec §3: el wordmark se
+ * pinta con un degradado, nunca color plano) + el subtítulo funcional en Sora.
+ */
+@Composable
+private fun Wordmark() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            "amover",
+            style =
+                TextStyle(
+                    fontFamily = AppTypography.frauncesItalic,
+                    fontStyle = FontStyle.Italic,
+                    fontSize = 29.sp,
+                    brush = Brush.verticalGradient(listOf(AppColors.gold0, AppColors.gold2)),
+                ),
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "Remové fondos y comprimí tus imágenes",
+            style = TextStyle(fontFamily = AppTypography.soraFamily, fontSize = 12.5.sp),
+            color = AppColors.creamDim,
+        )
+    }
+}
+
+/**
+ * La "Linie" bajo el wordmark (spec §5.2): línea dorada horizontal con los
+ * extremos transparentes, opacidad 0.55 — separa el header del contenido.
+ */
+@Composable
+private fun GoldDivider() {
+    Box(
+        modifier =
+            Modifier
+                .padding(vertical = 26.dp)
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color.Transparent,
+                            AppColors.gold2,
+                            AppColors.gold0,
+                            AppColors.gold2,
+                            Color.Transparent,
+                        ),
+                    ),
+                ),
+    )
 }
 
 /** Habilita el botón de resize solo si hay un archivo y un ancho/alto numérico válido. */
@@ -202,49 +282,37 @@ private fun pickImageFile(): File? {
     return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
 }
 
-/** Botón tipo "toggle": relleno cuando está seleccionado, contorno cuando no. */
-@Composable
-private fun BackgroundOptionButton(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    if (selected) {
-        Button(onClick = onClick) { Text(label) }
-    } else {
-        OutlinedButton(onClick = onClick) { Text(label) }
-    }
-}
-
-/** Cuadradito clickeable de un color de la paleta; se resalta el borde si está elegido. */
-@Composable
-private fun ColorSwatch(
-    color: Color,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .size(28.dp)
-                .background(color)
-                .border(width = if (selected) 3.dp else 1.dp, color = Color.Black)
-                .clickable(onClick = onClick),
-    )
-}
-
-/** Traduce el [OperationStatus] actual a un mensaje legible para el usuario. */
+/**
+ * Traduce el [OperationStatus] actual a un mensaje legible para el usuario.
+ * En éxito, resalta el nombre del archivo de salida en dorado (spec §5.8):
+ * es el único dato que importa mirar de un vistazo en ese mensaje.
+ */
 @Composable
 private fun StatusText(
     status: OperationStatus,
     processingLabel: String,
 ) {
-    val message =
-        when (status) {
-            is OperationStatus.Idle -> ""
-            is OperationStatus.Processing -> processingLabel
-            is OperationStatus.Success -> status.message
-            is OperationStatus.Error -> "Error: ${status.message}"
+    val style = TextStyle(fontFamily = AppTypography.soraFamily, fontSize = 12.sp)
+    when (status) {
+        is OperationStatus.Idle -> {}
+        is OperationStatus.Processing -> Text(processingLabel, style = style, color = AppColors.creamDim)
+        is OperationStatus.Error -> Text("Error: ${status.message}", style = style, color = AppColors.creamDim)
+        is OperationStatus.Success -> {
+            val fileName = status.output.name
+            val nameIndex = status.message.indexOf(fileName)
+            val annotated =
+                buildAnnotatedString {
+                    if (nameIndex < 0) {
+                        append(status.message)
+                    } else {
+                        append(status.message.substring(0, nameIndex))
+                        withStyle(SpanStyle(color = AppColors.gold0, fontWeight = FontWeight.Medium)) {
+                            append(fileName)
+                        }
+                        append(status.message.substring(nameIndex + fileName.length))
+                    }
+                }
+            Text(annotated, style = style, color = AppColors.creamDim)
         }
-    Text(message)
+    }
 }
