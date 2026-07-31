@@ -16,8 +16,8 @@ class ResizeImageUseCaseTest {
             originalWidth = 2000,
             originalHeight = 1000,
             originalBytes = 500_000,
-            resizedWidth = 1280,
-            resizedHeight = 640,
+            resizedWidth = 800,
+            resizedHeight = 400,
             resizedBytes = 120_000,
         )
 
@@ -26,18 +26,18 @@ class ResizeImageUseCaseTest {
         val input = File.createTempFile("resize-test-input", ".jpg").apply { deleteOnExit() }
         val output = File.createTempFile("resize-test-output", ".jpg").apply { deleteOnExit() }
 
-        var receivedMaxDimension = -1
+        var receivedSize: Pair<Int, Int>? = null
         val fakeResizer =
-            ImageResizer { _, _, maxDimension ->
-                receivedMaxDimension = maxDimension
+            ImageResizer { _, _, targetWidth, targetHeight ->
+                receivedSize = targetWidth to targetHeight
                 fakeResult
             }
 
-        val result = ResizeImageUseCase(fakeResizer)(input, output, maxDimension = 1280)
+        val result = ResizeImageUseCase(fakeResizer)(input, output, targetWidth = 800, targetHeight = 400)
 
         assertTrue(result.isSuccess)
         assertEquals(fakeResult, result.getOrNull())
-        assertEquals(1280, receivedMaxDimension)
+        assertEquals(800 to 400, receivedSize)
     }
 
     @Test
@@ -47,14 +47,32 @@ class ResizeImageUseCaseTest {
 
         var wasCalled = false
         val fakeResizer =
-            ImageResizer { _, _, _ ->
+            ImageResizer { _, _, _, _ ->
                 wasCalled = true
                 fakeResult
             }
 
-        val result = ResizeImageUseCase(fakeResizer)(missingInput, output, maxDimension = 1280)
+        val result = ResizeImageUseCase(fakeResizer)(missingInput, output, targetWidth = 800, targetHeight = 400)
 
         assertTrue(result.isFailure)
+        assertFalse(wasCalled)
+    }
+
+    @Test
+    fun `fails without calling the strategy when width or height is not positive`() {
+        val input = File.createTempFile("resize-test-input", ".jpg").apply { deleteOnExit() }
+        val output = File.createTempFile("resize-test-output", ".jpg").apply { deleteOnExit() }
+
+        var wasCalled = false
+        val fakeResizer =
+            ImageResizer { _, _, _, _ ->
+                wasCalled = true
+                fakeResult
+            }
+        val useCase = ResizeImageUseCase(fakeResizer)
+
+        assertTrue(useCase(input, output, targetWidth = 0, targetHeight = 400).isFailure)
+        assertTrue(useCase(input, output, targetWidth = 800, targetHeight = -1).isFailure)
         assertFalse(wasCalled)
     }
 }
