@@ -12,38 +12,27 @@ import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 import javax.imageio.stream.FileImageOutputStream
-import kotlin.math.max
-import kotlin.math.roundToInt
 
-// Calidad de compresión JPEG explícita: el writer por defecto de ImageIO
-// no siempre comprime lo suficiente y puede devolver un archivo más pesado
-// que el original si no se fija este valor.
+// Calidad de compresión JPEG explícita: el writer por defecto de ImageIO no
+// siempre comprime de forma consistente si no se fija este valor.
 private const val JPEG_QUALITY = 0.82f
 
 /**
  * Implementación real de [ImageResizer] usando solo las clases estándar de la JVM
- * (`javax.imageio` + `java.awt`), sin dependencias externas. Escala la imagen
- * manteniendo la proporción hasta que su lado mayor mida [maxDimension] px o menos;
- * si la imagen ya es más chica que eso, no la agranda.
- *
- * Para el usuario "reducir tamaño" significa "que pese menos", y volver a
- * codificar una imagen no siempre logra eso (una imagen ya optimizada, o un PNG
- * sin pérdida, puede terminar pesando más al reescribirse). Por eso, si el
- * resultado no pesa menos que el original, se devuelve una copia del original
- * en vez del reescrito: nunca se entrega un archivo más pesado que el de entrada.
+ * (`javax.imageio` + `java.awt`), sin dependencias externas. Redimensiona la imagen
+ * a exactamente el [targetWidth]x[targetHeight] pedido: puede agrandar o achicar,
+ * y si esas medidas no respetan la proporción original la imagen sale deformada
+ * a propósito (mantener la proporción es una decisión de capas más arriba,
+ * ver [com.appremove.domain.resize.AspectRatio]).
  */
 class BufferedImageResizer : ImageResizer {
     override fun resize(
         input: File,
         output: File,
-        maxDimension: Int,
+        targetWidth: Int,
+        targetHeight: Int,
     ): ImageResizeResult {
         val original = ImageIO.read(input) ?: throw IOException("No se pudo leer la imagen: ${input.path}")
-
-        // coerceAtMost(1.0) evita agrandar imágenes que ya son más chicas que maxDimension.
-        val scale = (maxDimension.toDouble() / max(original.width, original.height)).coerceAtMost(1.0)
-        val targetWidth = (original.width * scale).roundToInt().coerceAtLeast(1)
-        val targetHeight = (original.height * scale).roundToInt().coerceAtLeast(1)
 
         // Se conserva el formato del archivo de entrada (jpg, png, etc.) para la salida.
         val format = input.extension.ifBlank { "jpg" }
@@ -51,18 +40,6 @@ class BufferedImageResizer : ImageResizer {
 
         output.parentFile?.mkdirs()
         writeImage(scaled, format, output)
-
-        if (output.length() >= input.length()) {
-            input.copyTo(output, overwrite = true)
-            return ImageResizeResult(
-                originalWidth = original.width,
-                originalHeight = original.height,
-                originalBytes = input.length(),
-                resizedWidth = original.width,
-                resizedHeight = original.height,
-                resizedBytes = output.length(),
-            )
-        }
 
         return ImageResizeResult(
             originalWidth = original.width,
