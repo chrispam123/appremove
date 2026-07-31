@@ -6,7 +6,7 @@ App de escritorio para Windows, minimalista (frontend), que:
 
 ## Estado
 
-🚧 Bloque 0 — esqueleto del proyecto (estructura Gradle multi-módulo, sin lógica de negocio todavía).
+🚧 En desarrollo. Resize de imágenes con ancho/alto personalizado: listo. Remoción de fondo (ONNX + IS-Net): en progreso.
 
 ## Stack
 
@@ -14,6 +14,17 @@ App de escritorio para Windows, minimalista (frontend), que:
 - ONNX Runtime (Java) + modelo IS-Net para remoción de fondo
 - Gradle Wrapper (versión fijada en el repo, sin instalación global)
 - GitHub Actions para CI/CD
+
+## Modelo de IA (Git LFS)
+
+El modelo de remoción de fondo (`core-ml/src/main/resources/models/isnet-general-use.onnx`, ~170MB) se versiona con **Git LFS**. Para clonar el repo con el modelo real:
+
+```
+git lfs install
+git clone <repo>
+```
+
+Fuente del modelo: [rembg](https://github.com/danielgatis/rembg) (release `v0.0.0`), pesos bajo licencia OpenRAIL. El CI **no** descarga el contenido real de LFS (solo el puntero) para no consumir la cuota de ancho de banda del repo en cada corrida — no hace falta el modelo real para compilar, lintear ni correr los tests que no dependen de él.
 
 ## Módulos
 
