@@ -44,6 +44,16 @@ sealed interface ResizeStatus {
 class AppViewModel(
     private val scope: CoroutineScope,
 ) {
+    companion object {
+        /**
+         * Únicos formatos que la app sabe procesar. Se mantiene la lista corta
+         * a propósito: es la misma que usa el selector de archivos de la UI, y
+         * es también la última barrera antes de tocar disco por si algo la
+         * esquiva (ej. tipeando una ruta a mano en el diálogo del sistema).
+         */
+        val SUPPORTED_EXTENSIONS = listOf("jpg", "jpeg", "png")
+    }
+
     private val resizeImageUseCase = ResizeImageUseCase(BufferedImageResizer())
     private val outputPathResolver = OutputPathResolver()
     private val imageDimensionsReader = ImageDimensionsReader()
@@ -71,10 +81,19 @@ class AppViewModel(
 
     /**
      * Se llama cuando el usuario elige un archivo en el selector de la UI.
-     * Lee sus dimensiones originales en segundo plano y precarga los campos
-     * de ancho/alto con esos valores.
+     * Rechaza formatos fuera de [SUPPORTED_EXTENSIONS]; si no, lee las
+     * dimensiones originales en segundo plano y precarga los campos de
+     * ancho/alto con esos valores.
      */
     fun onImageSelected(file: File) {
+        if (file.extension.lowercase() !in SUPPORTED_EXTENSIONS) {
+            status =
+                ResizeStatus.Error(
+                    "Formato no soportado. Elegí un archivo ${SUPPORTED_EXTENSIONS.joinToString(" / ")}",
+                )
+            return
+        }
+
         selectedFile = file
         originalDimensions = null
         widthInput = ""
