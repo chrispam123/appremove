@@ -12,17 +12,22 @@ class RemoveBackgroundUseCase(
     private val backgroundRemover: BackgroundRemover,
 ) {
     /**
-     * Ejecuta la remoción de fondo de [input] hacia [output].
+     * Ejecuta la remoción/reemplazo de fondo de [input] hacia [output], con el
+     * [background] elegido (transparente, color sólido, u otra imagen).
      * Devuelve [Result.failure], sin llegar a invocar la estrategia concreta,
-     * si el archivo de entrada no existe o no es un archivo.
+     * si el archivo de entrada no existe o no es un archivo. La validación de
+     * un eventual archivo de fondo (para [BackgroundChoice.Image]) queda del
+     * lado de la estrategia concreta, que ya falla con un mensaje claro si no
+     * puede leerlo.
      */
     operator fun invoke(
         input: File,
         output: File,
+        background: BackgroundChoice,
     ): Result<BackgroundRemovalResult> {
         if (!input.exists() || !input.isFile) {
             return Result.failure(IllegalArgumentException("El archivo de entrada no existe: ${input.path}"))
         }
-        return runCatching { backgroundRemover.removeBackground(input, output) }
+        return runCatching { backgroundRemover.removeBackground(input, output, background) }
     }
 }

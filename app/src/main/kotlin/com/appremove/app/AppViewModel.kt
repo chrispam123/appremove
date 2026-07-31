@@ -8,6 +8,7 @@ import com.appremove.coreimage.ImageDimensions
 import com.appremove.coreimage.ImageDimensionsReader
 import com.appremove.coreml.OnnxBackgroundRemover
 import com.appremove.data.OutputPathResolver
+import com.appremove.domain.bgremoval.BackgroundChoice
 import com.appremove.domain.bgremoval.RemoveBackgroundUseCase
 import com.appremove.domain.resize.AspectRatio
 import com.appremove.domain.resize.ResizeImageUseCase
@@ -92,6 +93,10 @@ class AppViewModel(
     var resizeStatus by mutableStateOf<OperationStatus>(OperationStatus.Idle)
         private set
 
+    /** Fondo elegido para la remoción: transparente por defecto, color sólido, u otra imagen. */
+    var selectedBackground by mutableStateOf<BackgroundChoice>(BackgroundChoice.Transparent)
+        private set
+
     var backgroundRemovalStatus by mutableStateOf<OperationStatus>(OperationStatus.Idle)
         private set
 
@@ -114,6 +119,7 @@ class AppViewModel(
         originalDimensions = null
         widthInput = ""
         heightInput = ""
+        selectedBackground = BackgroundChoice.Transparent
         resizeStatus = OperationStatus.Idle
         backgroundRemovalStatus = OperationStatus.Idle
 
@@ -198,21 +204,28 @@ class AppViewModel(
         }
     }
 
+    /** Se llama al elegir una opción de fondo (transparente, un color de la paleta, o una imagen). */
+    fun onBackgroundChoiceSelected(choice: BackgroundChoice) {
+        selectedBackground = choice
+    }
+
     /**
-     * Corre la remoción de fondo del archivo seleccionado fuera del hilo de UI
-     * (Dispatchers.IO) y actualiza [backgroundRemovalStatus] con el resultado
+     * Corre la remoción/reemplazo de fondo del archivo seleccionado, con el
+     * fondo elegido en [selectedBackground], fuera del hilo de UI
+     * (Dispatchers.IO), y actualiza [backgroundRemovalStatus] con el resultado
      * (o el error) cuando termina. La salida siempre es PNG, sea cual sea el
-     * formato de entrada (única forma de tener canal alfa).
+     * formato de entrada.
      */
     fun removeBackgroundSelected() {
         val input = selectedFile ?: return
+        val background = selectedBackground
 
         backgroundRemovalStatus = OperationStatus.Processing
         scope.launch {
             backgroundRemovalStatus =
                 withContext(Dispatchers.IO) {
                     val output = outputPathResolver.resolve(input, suffix = "_sinfondo", extension = "png")
-                    removeBackgroundUseCase(input, output).fold(
+                    removeBackgroundUseCase(input, output, background).fold(
                         onSuccess = { result ->
                             OperationStatus.Success(output, "Listo: ${output.name} (${result.width}x${result.height})")
                         },

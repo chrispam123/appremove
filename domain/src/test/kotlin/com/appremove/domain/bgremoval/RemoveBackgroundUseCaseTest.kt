@@ -21,22 +21,23 @@ class RemoveBackgroundUseCaseTest {
         )
 
     @Test
-    fun `delegates to the strategy and returns its result when input exists`() {
+    fun `delegates to the strategy with the chosen background and returns its result`() {
         val input = File.createTempFile("bg-test-input", ".jpg").apply { deleteOnExit() }
         val output = File.createTempFile("bg-test-output", ".png").apply { deleteOnExit() }
 
-        var wasCalled = false
+        var receivedBackground: BackgroundChoice? = null
         val fakeRemover =
-            BackgroundRemover { _, _ ->
-                wasCalled = true
+            BackgroundRemover { _, _, background ->
+                receivedBackground = background
                 fakeResult
             }
 
-        val result = RemoveBackgroundUseCase(fakeRemover)(input, output)
+        val chosenBackground = BackgroundChoice.SolidColor(255, 255, 255)
+        val result = RemoveBackgroundUseCase(fakeRemover)(input, output, chosenBackground)
 
         assertTrue(result.isSuccess)
         assertEquals(fakeResult, result.getOrNull())
-        assertTrue(wasCalled)
+        assertEquals(chosenBackground, receivedBackground)
     }
 
     @Test
@@ -46,12 +47,12 @@ class RemoveBackgroundUseCaseTest {
 
         var wasCalled = false
         val fakeRemover =
-            BackgroundRemover { _, _ ->
+            BackgroundRemover { _, _, _ ->
                 wasCalled = true
                 fakeResult
             }
 
-        val result = RemoveBackgroundUseCase(fakeRemover)(missingInput, output)
+        val result = RemoveBackgroundUseCase(fakeRemover)(missingInput, output, BackgroundChoice.Transparent)
 
         assertTrue(result.isFailure)
         assertFalse(wasCalled)
