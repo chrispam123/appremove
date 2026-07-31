@@ -124,9 +124,13 @@ private fun canResize(viewModel: AppViewModel): Boolean {
  * comunes. Devuelve null si el usuario cancela.
  */
 private fun pickImageFile(): File? {
+    val extensions = AppViewModel.SUPPORTED_EXTENSIONS.toTypedArray()
     val chooser =
         JFileChooser().apply {
-            fileFilter = FileNameExtensionFilter("Imágenes (jpg, jpeg, png)", "jpg", "jpeg", "png")
+            // Sin esto, Windows deja igual la opción "todos los archivos": el
+            // filtro por sí solo no alcanza para impedir elegir un formato no soportado.
+            isAcceptAllFileFilterUsed = false
+            fileFilter = FileNameExtensionFilter("Imágenes (${extensions.joinToString()})", *extensions)
         }
     return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
 }
