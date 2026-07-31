@@ -8,15 +8,29 @@ import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
+import javax.imageio.IIOImage
 import javax.imageio.ImageIO
+import javax.imageio.ImageWriteParam
+import javax.imageio.stream.FileImageOutputStream
 import kotlin.math.max
 import kotlin.math.roundToInt
+
+// Calidad de compresión JPEG explícita: el writer por defecto de ImageIO
+// no siempre comprime lo suficiente y puede devolver un archivo más pesado
+// que el original si no se fija este valor.
+private const val JPEG_QUALITY = 0.82f
 
 /**
  * Implementación real de [ImageResizer] usando solo las clases estándar de la JVM
  * (`javax.imageio` + `java.awt`), sin dependencias externas. Escala la imagen
  * manteniendo la proporción hasta que su lado mayor mida [maxDimension] px o menos;
  * si la imagen ya es más chica que eso, no la agranda.
+ *
+ * Para el usuario "reducir tamaño" significa "que pese menos", y volver a
+ * codificar una imagen no siempre logra eso (una imagen ya optimizada, o un PNG
+ * sin pérdida, puede terminar pesando más al reescribirse). Por eso, si el
+ * resultado no pesa menos que el original, se devuelve una copia del original
+ * en vez del reescrito: nunca se entrega un archivo más pesado que el de entrada.
  */
 class BufferedImageResizer : ImageResizer {
     override fun resize(
@@ -36,8 +50,18 @@ class BufferedImageResizer : ImageResizer {
         val scaled = scaleImage(original, targetWidth, targetHeight, format)
 
         output.parentFile?.mkdirs()
-        if (!ImageIO.write(scaled, format, output)) {
-            throw IOException("Formato de imagen no soportado para escribir: $format")
+        writeImage(scaled, format, output)
+
+        if (output.length() >= input.length()) {
+            input.copyTo(output, overwrite = true)
+            return ImageResizeResult(
+                originalWidth = original.width,
+                originalHeight = original.height,
+                originalBytes = input.length(),
+                resizedWidth = original.width,
+                resizedHeight = original.height,
+                resizedBytes = output.length(),
+            )
         }
 
         return ImageResizeResult(
@@ -48,6 +72,37 @@ class BufferedImageResizer : ImageResizer {
             resizedHeight = targetHeight,
             resizedBytes = output.length(),
         )
+    }
+
+    /**
+     * Escribe [image] en [output] con el [format] pedido. Para JPEG se fija
+     * explícitamente [JPEG_QUALITY] vía [ImageWriteParam]; para el resto de los
+     * formatos (ej. PNG) se usa el writer por defecto de ImageIO.
+     */
+    private fun writeImage(
+        image: BufferedImage,
+        format: String,
+        output: File,
+    ) {
+        val isJpeg = format.equals("jpg", ignoreCase = true) || format.equals("jpeg", ignoreCase = true)
+        if (!isJpeg) {
+            if (!ImageIO.write(image, format, output)) {
+                throw IOException("Formato de imagen no soportado para escribir: $format")
+            }
+            return
+        }
+
+        val writer = ImageIO.getImageWritersByFormatName("jpg").next()
+        val writeParam =
+            writer.defaultWriteParam.apply {
+                compressionMode = ImageWriteParam.MODE_EXPLICIT
+                compressionQuality = JPEG_QUALITY
+            }
+        FileImageOutputStream(output).use { stream ->
+            writer.output = stream
+            writer.write(null, IIOImage(image, null, null), writeParam)
+            writer.dispose()
+        }
     }
 
     /**
