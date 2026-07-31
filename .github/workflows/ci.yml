@@ -10,6 +10,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # No se pide "lfs: true" a propósito: el modelo de IA (.onnx, ~170MB via
+      # Git LFS) no hace falta para compilar/lintear/testear, y bajarlo en cada
+      # corrida de CI consumiría la cuota mensual de ancho de banda de LFS del
+      # repo muy rápido. Los tests que sí necesitan el modelo real lo detectan
+      # y se saltan cuando corren en un checkout sin el contenido real de LFS.
       - name: Checkout
         uses: actions/checkout@v4
 

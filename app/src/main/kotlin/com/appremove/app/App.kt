@@ -28,9 +28,9 @@ import javax.swing.filechooser.FileNameExtensionFilter
 
 /**
  * Pantalla principal: selector de imagen, campos de ancho/alto (con opción de
- * mantener la proporción) y botón para redimensionar. Todo el estado vive en
- * [AppViewModel]; este composable solo lo lee y dispara sus funciones ante los
- * eventos del usuario.
+ * mantener la proporción), botón para redimensionar y botón para remover el
+ * fondo. Todo el estado vive en [AppViewModel]; este composable solo lo lee y
+ * dispara sus funciones ante los eventos del usuario.
  */
 @Composable
 fun App() {
@@ -104,8 +104,23 @@ fun App() {
                     Text("Reducir tamaño")
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+                StatusText(viewModel.resizeStatus, processingLabel = "Redimensionando imagen…")
+
                 Spacer(modifier = Modifier.height(16.dp))
-                StatusText(viewModel.status)
+
+                Button(
+                    onClick = { viewModel.removeBackgroundSelected() },
+                    enabled = canRemoveBackground(viewModel),
+                ) {
+                    Text("Remover fondo")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                StatusText(
+                    viewModel.backgroundRemovalStatus,
+                    processingLabel = "Removiendo fondo (puede tardar varios segundos)…",
+                )
             }
         }
     }
@@ -113,11 +128,15 @@ fun App() {
 
 /** Habilita el botón de resize solo si hay un archivo y un ancho/alto numérico válido. */
 private fun canResize(viewModel: AppViewModel): Boolean {
-    if (viewModel.selectedFile == null || viewModel.status is ResizeStatus.Processing) return false
+    if (viewModel.selectedFile == null || viewModel.resizeStatus is OperationStatus.Processing) return false
     val width = viewModel.widthInput.toIntOrNull()
     val height = viewModel.heightInput.toIntOrNull()
     return width != null && width > 0 && height != null && height > 0
 }
+
+/** Habilita el botón de remover fondo solo si hay un archivo elegido y no hay otra remoción en curso. */
+private fun canRemoveBackground(viewModel: AppViewModel): Boolean =
+    viewModel.selectedFile != null && viewModel.backgroundRemovalStatus !is OperationStatus.Processing
 
 /**
  * Abre el selector de archivos nativo (Swing) filtrado a formatos de imagen
@@ -135,18 +154,18 @@ private fun pickImageFile(): File? {
     return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
 }
 
-/** Traduce el [ResizeStatus] actual a un mensaje legible para el usuario. */
+/** Traduce el [OperationStatus] actual a un mensaje legible para el usuario. */
 @Composable
-private fun StatusText(status: ResizeStatus) {
+private fun StatusText(
+    status: OperationStatus,
+    processingLabel: String,
+) {
     val message =
         when (status) {
-            is ResizeStatus.Idle -> ""
-            is ResizeStatus.Processing -> "Redimensionando imagen…"
-            is ResizeStatus.Success ->
-                "Listo: ${status.output.name} " +
-                    "(${status.result.originalWidth}x${status.result.originalHeight} -> " +
-                    "${status.result.resizedWidth}x${status.result.resizedHeight})"
-            is ResizeStatus.Error -> "Error: ${status.message}"
+            is OperationStatus.Idle -> ""
+            is OperationStatus.Processing -> processingLabel
+            is OperationStatus.Success -> status.message
+            is OperationStatus.Error -> "Error: ${status.message}"
         }
     Text(message)
 }
