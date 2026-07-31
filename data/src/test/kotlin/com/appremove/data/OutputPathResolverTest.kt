@@ -13,10 +13,10 @@ class OutputPathResolverTest {
     private val tempDir = Files.createTempDirectory("output-path-resolver-test").toFile().apply { deleteOnExit() }
 
     @Test
-    fun `appends _resized suffix before the extension`() {
+    fun `appends the suffix before the extension`() {
         val input = File(tempDir, "foto.jpg").apply { createNewFile() }
 
-        val output = OutputPathResolver().resolve(input)
+        val output = OutputPathResolver().resolve(input, suffix = "_resized")
 
         assertEquals("foto_resized.jpg", output.name)
         assertEquals(tempDir, output.parentFile)
@@ -27,7 +27,7 @@ class OutputPathResolverTest {
         val input = File(tempDir, "foto2.jpg").apply { createNewFile() }
         File(tempDir, "foto2_resized.jpg").createNewFile()
 
-        val output = OutputPathResolver().resolve(input)
+        val output = OutputPathResolver().resolve(input, suffix = "_resized")
 
         assertEquals("foto2_resized_2.jpg", output.name)
     }
@@ -36,8 +36,17 @@ class OutputPathResolverTest {
     fun `keeps working for files without extension`() {
         val input = File(tempDir, "sinextension").apply { createNewFile() }
 
-        val output = OutputPathResolver().resolve(input)
+        val output = OutputPathResolver().resolve(input, suffix = "_resized")
 
         assertEquals("sinextension_resized", output.name)
+    }
+
+    @Test
+    fun `forces the given extension instead of the input's, for outputs that always write a fixed format`() {
+        val input = File(tempDir, "foto3.jpg").apply { createNewFile() }
+
+        val output = OutputPathResolver().resolve(input, suffix = "_sinfondo", extension = "png")
+
+        assertEquals("foto3_sinfondo.png", output.name)
     }
 }
