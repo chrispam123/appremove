@@ -1,17 +1,18 @@
 package com.appremove.app
 
-import com.appremove.coreimage.CoreImageInfo
-import com.appremove.coreml.CoreMlInfo
-import com.appremove.data.DataInfo
-import com.appremove.domain.DomainInfo
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 
-fun main() {
-    val modules =
-        listOf(
-            DomainInfo.MODULE_NAME,
-            DataInfo.MODULE_NAME,
-            CoreImageInfo.MODULE_NAME,
-            CoreMlInfo.MODULE_NAME,
-        )
-    println("appremove skeleton OK -> modules linked: ${modules.joinToString()}")
-}
+fun main() =
+    application {
+        Window(
+            onCloseRequest = ::exitApplication,
+            title = "appremove",
+            state = rememberWindowState(size = DpSize(900.dp, 600.dp)),
+        ) {
+            App()
+        }
+    }
