@@ -65,7 +65,11 @@ compose.desktop {
 val jpackageExecutable =
     javaToolchains
         .launcherFor { languageVersion.set(JavaLanguageVersion.of(17)) }
-        .map { it.metadata.installationPath.file("bin/jpackage.exe").asFile.absolutePath }
+        .map {
+            it.metadata.installationPath
+                .file("bin/jpackage.exe")
+                .asFile.absolutePath
+        }
 
 tasks.register<Exec>("packageMsiBranded") {
     group = "compose desktop"
@@ -109,20 +113,31 @@ tasks.register<Exec>("packageMsiBranded") {
             "${wixToolsetDir.get().asFile.absolutePath}${File.pathSeparator}${System.getenv("PATH")}",
         )
         args(
-            "--type", "msi",
-            "--app-image", appImageDir.get().asFile.absolutePath,
-            "--resource-dir", processedDir.absolutePath,
-            "--dest", destDir.get().asFile.absolutePath,
-            "--name", appPackageName,
-            "--app-version", appPackageVersion,
-            "--vendor", appVendor,
-            "--description", appDescription,
-            "--icon", project.file("packaging/appremove.ico").absolutePath,
+            "--type",
+            "msi",
+            "--app-image",
+            appImageDir.get().asFile.absolutePath,
+            "--resource-dir",
+            processedDir.absolutePath,
+            "--dest",
+            destDir.get().asFile.absolutePath,
+            "--name",
+            appPackageName,
+            "--app-version",
+            appPackageVersion,
+            "--vendor",
+            appVendor,
+            "--description",
+            appDescription,
+            "--icon",
+            project.file("packaging/appremove.ico").absolutePath,
             "--win-per-user-install",
             "--win-shortcut",
             "--win-menu",
-            "--win-menu-group", "amover",
-            "--win-upgrade-uuid", appUpgradeUuid,
+            "--win-menu-group",
+            "amover",
+            "--win-upgrade-uuid",
+            appUpgradeUuid,
         )
     }
 }
