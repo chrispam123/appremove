@@ -1,12 +1,13 @@
 # appremove
 
-App de escritorio para Windows, minimalista (frontend), que:
+Diseño artesanal inspiracion y filosofia mia (humana), las descisiones de codigo y de seguridad es responsabilidad 100% humana.
+App de escritorio para Windows, minimalista (frontend), que resuelve el problema de simplicidad y rapidez es libre, gratis y sin publicidad y todo en 100% local :
 1. Remueve/reemplaza el fondo de imágenes usando un modelo de IA local (sin cuotas, sin internet).
 2. Reduce el tamaño de imágenes (compresión/resize).
 
 ## Estado
 
-🚧 En desarrollo. Resize de imágenes con ancho/alto personalizado: listo. Remoción de fondo (ONNX + IS-Net): en progreso.
+🚧 En desarrollo. Resize de imágenes con ancho/alto personalizado: listo. Remoción de fondo (ONNX + IS-Net): , se puede ampliar con remoción exacta para humanos en proxima actualización.
 
 ## Stack
 
@@ -35,5 +36,5 @@ Fuente del modelo: [rembg](https://github.com/danielgatis/rembg) (release `v0.0.
 - `core-ml` — inferencia ONNX (remoción de fondo)
 
 ## Licencia
-
+Creado por Christian Gohring 
 MIT — ver [LICENSE](LICENSE).

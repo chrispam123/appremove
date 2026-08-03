@@ -66,10 +66,10 @@ private val BACKGROUND_COLOR_PALETTE =
  * la zona de arrastre de la ventana (no hay barra de título nativa — la
  * ventana es `undecorated`, ver [com.appremove.app.DeviceFrame] en `Main.kt`).
  *
- * Tarea C del rediseño "Bauhaus cromado": por ahora solo el wordmark, el
+ * por ahora solo el wordmark, el
  * subtítulo y el divisor dorado tienen el acabado final; el resto de la UI
  * (elegir imagen, dimensiones, fondo) sigue con componentes Material simples
- * — se restylean en las Tareas D y E con las piezas Kandinsky (Punkt,
+ * — se restylean en las Tareas D y E con las piezas  (Punkt,
  * Fläche, Linie, CTA de lujo).
  */
 @Composable
@@ -221,7 +221,7 @@ private fun Wordmark() {
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            "Remové fondos y comprimí tus imágenes",
+            "Remover fondos y redimensiona tus imágenes",
             style = TextStyle(fontFamily = AppTypography.soraFamily, fontSize = 12.5.sp),
             color = AppColors.creamDim,
         )
